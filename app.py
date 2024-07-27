@@ -5,7 +5,7 @@ import chardet
 import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
-import fitz  # PyMuPDF
+import fitz 
 import docx
 import io
 import uuid
@@ -46,6 +46,7 @@ You are Anansi, the knowledge deity and assistant to mortals who need help desig
 ## Example Anki Text File:
 
 ```
+Front	Back	Tags
 What is a p-value in statistics?	A p-value is the probability of obtaining test results at least as extreme as the observed results, assuming the null hypothesis is true.	statistics probability
 What is the mean of the data set {2, 4, 6, 8, 10}?	The mean is 6.	statistics mean
 What is the probability of rolling a 3 on a fair six-sided die?	The probability is 1/6.	probability dice
