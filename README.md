@@ -33,6 +33,7 @@ streamlit run app.py
 http://localhost:8501
 ```
 
-
+# On the benefits and utility of Spaced Repetition.
+There's not enough good to be said about the benefits of Spaced Repetition. It isn't simply a system for memorization but for familiarizing with practically anything one wants to get accustomed to. The best overview of the subject comes from Gwern who provides an overview of the preexisting research on the topic [here](https://gwern.net/spaced-repetition).
 
 
