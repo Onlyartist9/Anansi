@@ -1,13 +1,11 @@
 import streamlit as st
 import anthropic
-import os
 import chardet
 import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
 import fitz 
 import docx
-import io
 import uuid
 import tempfile
 
