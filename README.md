@@ -48,12 +48,12 @@ Anansi is your assistant for creating Anki decks. You can upload files in variou
 
 2. Build the Docker image:
     ```bash
-    docker build -t streamlit .
+    docker build -t anansi .
     ```
 
 3. Run the Docker container:
     ```bash
-    docker run -p 8501:8501 streamlit-app
+    docker run -p 8501:8501 anansi
     ```
 
 4. Open your browser and go to:
