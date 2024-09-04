@@ -11,7 +11,7 @@ import io
 import uuid
 import tempfile
 
-MODEL = "claude-3-5-sonnet-20240620"
+MODEL = "claude-3-haiku-20240307"
 MAX_TOKENS = 4096
 SYSTEM ="""
 # Anki Deck Creation Assistant
@@ -20,14 +20,11 @@ You are Anansi, the knowledge deity and assistant to mortals who need help desig
 
 ## File Format Guidelines
 
-1. **Separator**: Use consistent separators throughout the file. Choose one of:
-   - Tabs (\t) - Most reliable and recommended
-   - Commas (,) - Use only if fields don't contain commas
-   - Semicolons (;) - Alternative if fields contain commas
+1. **Separator**: Use semicolons (;) as separators throughout the file.
 
 2. **Fields**: Each line represents a card. Fields are separated by the chosen separator. At minimum, include a "Front" and "Back" field.
 
-3. **Field Order**: The first line of the file should be a header row specifying field names, e.g., "Front\tBack\tTags".
+3. **Field Order**: The first line of the file should be a header row specifying field names, e.g., "Front;Back;Tags".
 
 4. **HTML Formatting**: You can use basic HTML tags for formatting within fields. Common tags include:
    - `<b>bold</b>`
@@ -43,32 +40,25 @@ You are Anansi, the knowledge deity and assistant to mortals who need help desig
 
 ## Example Anki Text File:
 
-```
-Front	Back	Tags
-What is a p-value in statistics?	A p-value is the probability of obtaining test results at least as extreme as the observed results, assuming the null hypothesis is true.	statistics probability
-What is the mean of the data set {2, 4, 6, 8, 10}?	The mean is 6.	statistics mean
-What is the probability of rolling a 3 on a fair six-sided die?	The probability is 1/6.	probability dice
-What does HTML stand for?	HTML stands for <b>H</b>yper<b>T</b>ext <b>M</b>arkup <b>L</b>anguage.	computing web
-"What is Anki's default separator for text imports?"	Anki's default separator for text imports is the tab character.	anki software
-```
+Front;Back;Tags What is a p-value in statistics?;A p-value is the probability of obtaining test results at least as extreme as the observed results, assuming the null hypothesis is true.;statistics probability What is the mean of the data set {2, 4, 6, 8, 10}?;The mean is 6.;statistics mean What is the probability of rolling a 3 on a fair six-sided die?;The probability is 1/6.;probability dice What does HTML stand for?;HTML stands for <b>H</b>yper<b>T</b>ext <b>M</b>arkup <b>L</b>anguage.;computing web “What is Anki’s default separator for text imports?”;Anki’s default separator for text imports is the tab character.;anki software
 
 ## Response Format
 
 When asked to create an Anki deck, provide only the valid file content, without any additional explanation or commentary. Follow these steps:
 
 1. Begin with a header row specifying field names.
-2. Use tabs as the default separator unless otherwise specified.
+2. Use semicolons as the default separator unless otherwise specified.
 3. Include at least "Front" and "Back" fields for each card.
 4. Add a "Tags" field if tags are relevant.
 5. Ensure all lines (except comments) have the same number of fields.
 6. Use proper escaping for fields containing the separator character.
 7. Implement appropriate HTML formatting for emphasis or structure when needed.
 
-Always return the file content in a format ready for direct import into Anki, with no surrounding explanation or markdown code blocks.
+## Important Note
 
-## Interaction with user
-The user may ask for specific style specifications, or specific content based on a text presented. Make sure you fulfil these requests in a manner consistent with the above guideline.
+Always return the file content in a format ready for direct import into Anki, with no surrounding explanation or markdown code blocks. Stick to the response format.
 """
+
 
 def detect_encoding(file):
     raw_data = file.read()
@@ -114,26 +104,27 @@ def read_docx(file):
     return '\n'.join(text)
 
 def generate_questions_from_text(text, n, user_input, client, model, max_tokens, system):
-    prompt = f"{user_input}\n\nGenerate {n} distinct question-answer pairs from the following text:\n\n{text}"
+    prompt = f"{user_input}. \n\nGenerate {n} distinct front-back pairs based on the following text:\n\n{text}"
     response = client.messages.create(
         model=model,
         max_tokens=max_tokens,
         system=system,
         temperature=0.2,
         messages=[
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": prompt},
+            {"role":"assistant","content": f"Here are {n} distinct front-back pairs based on what you requested:"}
         ],
     )
     return response.content[0].text if response else 'No response from API'
 
 # Function to generate questions without text
 def generate_questions(n, user_input, client, model, max_tokens, system):
-    prompt = f"{user_input}\n\nGenerate {n} distinct question-answer pairs."
+    prompt = f"{user_input}\n\nGenerate {n} distinct front-back pairs."
     response = client.messages.create(
         model=model,
         max_tokens=max_tokens,
         system=system,
-        temperature=0.8,
+        temperature=0.2,
         messages=[
             {"role": "user", "content": prompt}
         ],
@@ -165,7 +156,7 @@ api_key = st.text_input("Enter your Anthropic API key", type="password")
 
 uploaded_file = st.file_uploader("Upload a file (max 50MB)", type=["txt", "pdf", "docx", "csv", "html", "epub"])
 num_questions = st.number_input("How many question/answer pairs do you need?", min_value=5, max_value=100, value=10)
-user_input = st.text_area("How can I help you?", "")
+user_input = st.text_area("How can I help you?", "",placeholder="I need to test my knowledge on CUDA kernel implementations.")
 
 if st.button("Generate"):
     if api_key:
@@ -197,6 +188,7 @@ if st.button("Generate"):
     else:
         st.error("Please enter your Anthropic API key.")
     
+    qa_pairs = qa_pairs.strip()
     st.success("Anki deck generated successfully!")
     st.download_button("Download the file", data=qa_pairs, file_name="question_answer_pairs.txt", mime="text/plain")
 
