@@ -11,10 +11,8 @@ import io
 import uuid
 import tempfile
 
-API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 MODEL = "claude-3-5-sonnet-20240620"
 MAX_TOKENS = 4096
-CLIENT = anthropic.Anthropic(api_key=API_KEY)
 SYSTEM ="""
 # Anki Deck Creation Assistant
 
@@ -71,6 +69,7 @@ Always return the file content in a format ready for direct import into Anki, wi
 ## Interaction with user
 The user may ask for specific style specifications, or specific content based on a text presented. Make sure you fulfil these requests in a manner consistent with the above guideline.
 """
+
 def detect_encoding(file):
     raw_data = file.read()
     result = chardet.detect(raw_data)
@@ -114,25 +113,26 @@ def read_docx(file):
         text.append(para.text)
     return '\n'.join(text)
 
-def generate_questions_from_text(text, n, user_input):
+def generate_questions_from_text(text, n, user_input, client, model, max_tokens, system):
     prompt = f"{user_input}\n\nGenerate {n} distinct question-answer pairs from the following text:\n\n{text}"
-    response = CLIENT.messages.create(
-        model=MODEL,
-        max_tokens=MAX_TOKENS,
-        system=SYSTEM,
-        temperature=0.5,
+    response = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=system,
+        temperature=0.2,
         messages=[
             {"role": "user", "content": prompt}
         ],
     )
     return response.content[0].text if response else 'No response from API'
 
-def generate_questions(n, user_input):
+# Function to generate questions without text
+def generate_questions(n, user_input, client, model, max_tokens, system):
     prompt = f"{user_input}\n\nGenerate {n} distinct question-answer pairs."
-    response = CLIENT.messages.create(
-        model=MODEL,
-        max_tokens=MAX_TOKENS,
-        system=SYSTEM,
+    response = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=system,
         temperature=0.8,
         messages=[
             {"role": "user", "content": prompt}
@@ -151,38 +151,53 @@ st.sidebar.info("""
 Anansi is your assistant for creating Anki decks. You can upload files in various formats (txt, pdf, docx, csv, html, odt, rtf, epub) or ask for a deck of questions on a specific subject without uploading a file. After generating the question-answer pairs, you can download the text file and import it into Anki.
 """)
 
-uploaded_file = st.file_uploader("Upload a file (max 10MB)", type=["txt", "pdf", "docx", "csv", "html", "epub"])
-num_questions = st.number_input("How many question/answer pairs do you need?", min_value=5, max_value=25, value=10)
+st.sidebar.title("Instructions")
+st.sidebar.info("""
+1. **Enter API Key**: Provide your Anthropic API key in the input field.
+2. **Upload a File**: You can upload files in various formats (txt, pdf, docx, csv, html, epub) with a maximum size of 10MB.
+3. **Generate Questions**: If no file is uploaded, you can ask for a deck of questions on a specific subject.
+4. **Download the File**: After generating the question-answer pairs, download the text file.
+5. **Import to Anki**: Open Anki, go to `File` -> `Import`, select the downloaded text file, map the fields, and import the cards into your deck.
+""")
+
+# Input for API key
+api_key = st.text_input("Enter your Anthropic API key", type="password")
+
+uploaded_file = st.file_uploader("Upload a file (max 50MB)", type=["txt", "pdf", "docx", "csv", "html", "epub"])
+num_questions = st.number_input("How many question/answer pairs do you need?", min_value=5, max_value=100, value=10)
 user_input = st.text_area("How can I help you?", "")
 
 if st.button("Generate"):
-    if uploaded_file is not None:
-        if uploaded_file.size > 10 * 1024 * 1024:
-            st.error("File size exceeds 10MB. Please upload a smaller file.")
-        else:
-            if uploaded_file.type == "application/epub+zip":
-                text = read_epub(uploaded_file)
-            elif uploaded_file.type == "application/pdf":
-                text = read_pdf(uploaded_file)
-            elif uploaded_file.type in ["text/html", "application/xhtml+xml"]:
-                text = read_html(uploaded_file)
-            elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-                text = read_docx(uploaded_file)
+    if api_key:
+        client = anthropic.Anthropic(api_key=api_key)
+        model = MODEL
+        max_tokens = MAX_TOKENS
+        system = SYSTEM
+
+        if uploaded_file is not None:
+            if uploaded_file.size > 50 * 1024 * 1024:
+                st.error("File size exceeds 10MB. Please upload a smaller file.")
             else:
-                encoding = detect_encoding(uploaded_file)
-                text = uploaded_file.read().decode(encoding)
-            qa_pairs = generate_questions_from_text(text, num_questions, user_input)
+                if uploaded_file.type == "application/epub+zip":
+                    text = read_epub(uploaded_file)
+                elif uploaded_file.type == "application/pdf":
+                    text = read_pdf(uploaded_file)
+                elif uploaded_file.type in ["text/html", "application/xhtml+xml"]:
+                    text = read_html(uploaded_file)
+                elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                    text = read_docx(uploaded_file)
+                else:
+                    encoding = detect_encoding(uploaded_file)
+                    text = uploaded_file.read().decode(encoding)
+                with st.spinner(text="Generating Anki cards..."):
+                    qa_pairs = generate_questions_from_text(text, num_questions, user_input, client, model, max_tokens, system)
+        else:
+            with st.spinner(text="Generating Anki cards..."):
+                qa_pairs = generate_questions(num_questions, user_input, client, model, max_tokens, system)
     else:
-        qa_pairs = generate_questions(num_questions, user_input)
+        st.error("Please enter your Anthropic API key.")
     
     save_to_file(qa_pairs, "question_answer_pairs.txt")
     st.success("Anki deck generated successfully!")
     st.download_button("Download the file", data=qa_pairs, file_name="question_answer_pairs.txt", mime="text/plain")
 
-st.sidebar.title("Instructions")
-st.sidebar.info("""
-1. **Upload a File**: You can upload files in various formats (txt, pdf, docx, csv, html, epub) with a maximum size of 10MB.
-2. **Generate Questions**: If no file is uploaded, you can ask for a deck of questions on a specific subject.
-3. **Download the File**: After generating the question-answer pairs, download the text file.
-4. **Import to Anki**: Open Anki, go to `File` -> `Import`, select the downloaded text file, map the fields, and import the cards into your deck.
-""")
