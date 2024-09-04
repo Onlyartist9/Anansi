@@ -197,7 +197,6 @@ if st.button("Generate"):
     else:
         st.error("Please enter your Anthropic API key.")
     
-    save_to_file(qa_pairs, "question_answer_pairs.txt")
     st.success("Anki deck generated successfully!")
     st.download_button("Download the file", data=qa_pairs, file_name="question_answer_pairs.txt", mime="text/plain")
 
