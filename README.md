@@ -10,15 +10,10 @@ Anansi is your assistant for creating Anki decks. You can upload files in variou
 
 ## Installation
 
-<<<<<<< HEAD
-1. Clone the repository:
-```bash
-=======
 ### Using Python
 
 1. Clone the repository and change directory into the cloned repo:
     ```bash
->>>>>>> 3ec378e... Included DockerFile for container builds and modified readme
     git clone https://github.com/onlyartist9/anansi.git
     cd anansi
     ```
