@@ -152,7 +152,7 @@ st.sidebar.info("""
 # Input for API key
 api_key = st.text_input("Enter your Anthropic API key", type="password")
 
-uploaded_file = st.file_uploader("Upload a file (max 50MB)", type=["txt", "pdf", "docx", "csv", "html", "epub"])
+uploaded_file = st.file_uploader("Upload a file (max 20MB)", type=["txt", "pdf", "docx", "csv", "html", "epub"])
 num_questions = st.number_input("How many question/answer pairs do you need?", min_value=5, max_value=100, value=10)
 user_input = st.text_area("How can I help you?", "",placeholder="I need to test my knowledge on CUDA kernel implementations.")
 
@@ -164,7 +164,7 @@ if st.button("Generate"):
         system = SYSTEM
 
         if uploaded_file is not None:
-            if uploaded_file.size > 50 * 1024 * 1024:
+            if uploaded_file.size > 20 * 1024 * 1024:
                 st.error("File size exceeds 10MB. Please upload a smaller file.")
             else:
                 if uploaded_file.type == "application/epub+zip":
@@ -189,4 +189,3 @@ if st.button("Generate"):
     qa_pairs = qa_pairs.strip()
     st.success("Anki deck generated successfully!")
     st.download_button("Download the file", data=qa_pairs, file_name="question_answer_pairs.txt", mime="text/plain")
-
